@@ -1,0 +1,38 @@
+# gradle
+.gradle/
+build/
+out/
+classes/
+.gradle-enterprise/
+
+# eclipse
+*.launch
+
+# idea
+.idea/
+!.idea/runConfigurations/
+*.iml
+*.ipr
+*.iws
+
+# vscode
+.settings/
+.vscode/
+bin/
+.classpath
+.project
+
+# macos & OS
+*.DS_Store
+Thumbs.db
+
+# fabric & minecraft run data
+run/
+crash-reports/
+logs/
+
+# java logs & memory dumps
+hs_err_*.log
+replay_*.log
+*.hprof
+*.jfr
