@@ -36,3 +36,6 @@ hs_err_*.log
 replay_*.log
 *.hprof
 *.jfr
+
+# heavy assets
+src/main/resources/assets/heavy/
