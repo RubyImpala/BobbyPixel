@@ -3,16 +3,16 @@
 	"id": "bobbypixel",
 	"version": "${version}",
 	"name": "BobbyPixel",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"description": "Isolates Bobby chunk storage per Hypixel sub-server.",
 	"authors": [
-		"Me!"
+		"RubyImpala_"
 	],
 	"contact": {
 		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
+		"sources": "https://github.com/RubyImpala/BobbyPixel"
 	},
 	"license": "LGPL-3.0-only",
-	"icon": "assets/bobbypixel/icon.png",
+	"icon": "assets/bobbypixel/icon1.png",
 	"environment": "*",
 	"entrypoints": {
 		"main": [
