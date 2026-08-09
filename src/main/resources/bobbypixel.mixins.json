@@ -3,7 +3,7 @@
 	"package": "com.rubyimpala.bobbypixel.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"mixins": [
-		"ExampleMixin"
+		"FakeChunkManagerMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

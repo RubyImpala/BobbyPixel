@@ -7,6 +7,8 @@ import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.rubyimpala.bobbypixel.hypixel.HypixelLocationTracker;
+
 public class BobbyPixel implements ModInitializer {
 	public static final String MOD_ID = "bobbypixel";
 
@@ -22,6 +24,8 @@ public class BobbyPixel implements ModInitializer {
 		// Proceed with mild caution.
 
 		LOGGER.info("Hello Fabric world!");
+
+		HypixelLocationTracker.init();
 	}
 
 	public static Identifier id(String path) {
