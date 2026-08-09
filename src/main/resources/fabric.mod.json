@@ -12,8 +12,8 @@
 		"sources": "https://github.com/RubyImpala/BobbyPixel"
 	},
 	"license": "LGPL-3.0-only",
-	"icon": "assets/bobbypixel/icon1.png",
-	"environment": "*",
+	"icon": "src/main/resources/assets/heavy/icon1.png",
+	"environment": "client",
 	"entrypoints": {
 		"main": [
 			"com.rubyimpala.bobbypixel.BobbyPixel"
