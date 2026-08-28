@@ -1,6 +1,7 @@
 package com.rubyimpala.bobbypixel.mixin;
 
 import com.rubyimpala.bobbypixel.hypixel.FakeChunkManagerLocationAware;
+import com.rubyimpala.bobbypixel.hypixel.HypixelCachePaths;
 import com.rubyimpala.bobbypixel.hypixel.HypixelLocationTracker;
 import de.johni0702.minecraft.bobby.BobbyConfig;
 import de.johni0702.minecraft.bobby.FakeChunkManager;
@@ -30,29 +31,26 @@ import java.util.function.Function;
 @Mixin(FakeChunkManager.class)
 public abstract class FakeChunkManagerMixin implements FakeChunkManagerLocationAware {
 
-    @Mutable
-    @Shadow
-    @Final
-    private FakeChunkStorage storage;
+    @Mutable @Shadow @Final private FakeChunkStorage storage;
+    @Shadow @Final private List<Function<ChunkPos, CompletableFuture<Optional<CompoundTag>>>> storages;
 
-    @Shadow
-    @Final
-    private List<Function<ChunkPos, CompletableFuture<Optional<CompoundTag>>>> storages;
+    // ─── Folder naming ──────────────────────────────────────────────
 
     @Inject(method = "getCurrentWorldOrServerName", at = @At("RETURN"), cancellable = true)
     private static void bobbypixel$overrideServerName(ClientPacketListener networkHandler, CallbackInfoReturnable<String> cir) {
         if (HypixelLocationTracker.isOnHypixel()) {
-            cir.setReturnValue("hypixel");
+            cir.setReturnValue(HypixelCachePaths.HYPIXEL_ROOT);
         }
     }
 
+    // ─── Skip Bobby's own instance-separation on Hypixel ───────────
+
     @Redirect(method = "<init>", at = @At(value = "INVOKE", target = "Lde/johni0702/minecraft/bobby/BobbyConfig;isDynamicMultiWorld()Z"))
     private boolean bobbypixel$forceStaticStorageOnHypixel(BobbyConfig config) {
-        if (HypixelLocationTracker.isOnHypixel()) {
-            return false;
-        }
-        return config.isDynamicMultiWorld();
+        return !HypixelLocationTracker.isOnHypixel() && config.isDynamicMultiWorld();
     }
+
+    // ─── Initial storage path (constructor time) ───────────────────
 
     @ModifyArg(method = "<init>", at = @At(value = "INVOKE",
             target = "Lde/johni0702/minecraft/bobby/Worlds;getFor(Ljava/nio/file/Path;)Lde/johni0702/minecraft/bobby/Worlds;"))
@@ -69,18 +67,41 @@ public abstract class FakeChunkManagerMixin implements FakeChunkManagerLocationA
 
     @Unique
     private Path bobbypixel$computeStoragePath(Path storagePath) {
-        if (!HypixelLocationTracker.isOnHypixel()) {
-            return storagePath;
-        }
+        if (!HypixelLocationTracker.isOnHypixel()) return storagePath;
 
-        Path hypixelRoot = Minecraft.getInstance().gameDirectory.toPath().resolve(".bobby").resolve("hypixel");
+        Path hypixelRoot = bobbypixel$hypixelRoot();
         String cacheKey = HypixelLocationTracker.getCurrentCacheKey();
 
-        if (cacheKey == null) {
-            return FileSystemUtils.resolveSafeDirectoryName(
-                    hypixelRoot.resolve("_pending"), HypixelLocationTracker.getPendingSessionId());
+        return cacheKey == null
+                ? FileSystemUtils.resolveSafeDirectoryName(hypixelRoot.resolve(HypixelCachePaths.PENDING_FOLDER), HypixelLocationTracker.getPendingSessionId())
+                : bobbypixel$resolveKeyPath(hypixelRoot, cacheKey);
+    }
+
+    // ─── Live swap once location resolves (post-construction) ──────
+
+    @Override
+    @Unique
+    public void bobbypixel$applyResolvedLocation() {
+        if (!HypixelLocationTracker.isOnHypixel()) return;
+        String cacheKey = HypixelLocationTracker.getCurrentCacheKey();
+        if (cacheKey == null) return;
+
+        FakeChunkStorage newStorage = FakeChunkStorage.getFor(bobbypixel$resolveKeyPath(bobbypixel$hypixelRoot(), cacheKey), true);
+        if (newStorage == this.storage) return;
+
+        this.storage = newStorage;
+        if (!this.storages.isEmpty()) {
+            this.storages.set(0, newStorage::loadTag);
         }
-        return bobbypixel$resolveKeyPath(hypixelRoot, cacheKey);
+    }
+
+    // ─── Shared helpers ─────────────────────────────────────────────
+
+    @Unique
+    private static Path bobbypixel$hypixelRoot() {
+        return Minecraft.getInstance().gameDirectory.toPath()
+                .resolve(HypixelCachePaths.BOBBY_FOLDER)
+                .resolve(HypixelCachePaths.HYPIXEL_ROOT);
     }
 
     @Unique
@@ -90,27 +111,5 @@ public abstract class FakeChunkManagerMixin implements FakeChunkManagerLocationA
             result = FileSystemUtils.resolveSafeDirectoryName(result, segment);
         }
         return result;
-    }
-
-    // Called from HypixelLocationTracker whenever a location packet resolves — swaps
-    // the live storage out from under an already-constructed FakeChunkManager, since
-    // by the time we know the location, the constructor has usually already run.
-    @Override
-    @Unique
-    public void bobbypixel$applyResolvedLocation() {
-        if (!HypixelLocationTracker.isOnHypixel()) return;
-        String cacheKey = HypixelLocationTracker.getCurrentCacheKey();
-        if (cacheKey == null) return;
-
-        Path hypixelRoot = Minecraft.getInstance().gameDirectory.toPath().resolve(".bobby").resolve("hypixel");
-        Path resolved = bobbypixel$resolveKeyPath(hypixelRoot, cacheKey);
-
-        FakeChunkStorage newStorage = FakeChunkStorage.getFor(resolved, true);
-        if (newStorage == this.storage) return; // already correct
-
-        this.storage = newStorage;
-        if (!this.storages.isEmpty()) {
-            this.storages.set(0, newStorage::loadTag);
-        }
     }
 }
